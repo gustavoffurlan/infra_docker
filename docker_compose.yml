@@ -1,0 +1,155 @@
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:1.40.1
+    container_name: n8n
+    restart: unless-stopped
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - DB_TYPE=mysqldb
+      - DB_MYSQLDB_HOST=mysql
+      - DB_MYSQLDB_PORT=3306
+      - DB_MYSQLDB_DATABASE=${DB_NAME}
+      - DB_MYSQLDB_USER=${DB_USER}
+      - DB_MYSQLDB_PASSWORD=${DB_PASSWORD}
+      - GENERIC_TIMEZONE=America/Argentina/Buenos_Aires
+      - NODE_ENV=production
+    ports:
+      - "${N8N_PORT}:5678"
+    volumes:
+      - "./n8n_data:/home/node/.n8n"
+      - "/etc/localtime:/etc/localtime:ro"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - internal_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_CHARSET=utf8mb4
+      - MYSQL_COLLATION=utf8mb4_unicode_ci
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb_buffer_pool_size=1G
+    volumes:
+      - "./mysql_data:/var/lib/mysql"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "./mysql-init:/docker-entrypoint-initdb.d"
+    networks:
+      - internal_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${ROOT_PASSWORD}",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  phphelpdesk:
+    image: php:8.2-apache
+    container_name: phphelpdesk
+    restart: unless-stopped
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html/public
+      - DB_HOST=mysql
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "8080:80"
+    volumes:
+      - "./phphelpdesk:/var/www/html"
+      - "./apache-config.conf:/etc/apache2/sites-available/000-default.conf"
+      - "/etc/localtime:/etc/localtime:ro"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - internal_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  phpmyadmin:
+    image: phpmyadmin:5.2.1
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=${ROOT_PASSWORD}
+      - UPLOAD_LIMIT=256M
+      - PMA_ARBITRARY=0
+    ports:
+      - "8081:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - internal_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP server
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+    networks:
+      - internal_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8025"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  internal_net:
+    driver: bridge
+    name: n8n_internal_net
+
+volumes:
+  n8n_data:
+    driver: local
+  mysql_data:
+    driver: local
