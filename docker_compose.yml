@@ -22,7 +22,7 @@ services:
     ports:
       - "${N8N_PORT}:5678"
     volumes:
-      - "./n8n_data:/home/node/.n8n"
+      - "C:/Users/gusta/Documents/IT/Desarrollo/infra_docker/n8n_data:/home/node/.n8n"
       - "/etc/localtime:/etc/localtime:ro"
     depends_on:
       mysql:
@@ -53,9 +53,9 @@ services:
       - --collation-server=utf8mb4_unicode_ci
       - --innodb_buffer_pool_size=1G
     volumes:
-      - "./mysql_data:/var/lib/mysql"
+      - "C:/Users/gusta/Documents/IT/Desarrollo/infra_docker/mysql_data:/var/lib/mysql"
       - "/etc/localtime:/etc/localtime:ro"
-      - "./mysql-init:/docker-entrypoint-initdb.d"
+      - "C:/Users/gusta/Documents/IT/Desarrollo/infra_docker/mysql_init:/docker-entrypoint-initdb.d"
     networks:
       - internal_net
     healthcheck:
@@ -88,8 +88,8 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - "./phphelpdesk:/var/www/html"
-      - "./apache-config.conf:/etc/apache2/sites-available/000-default.conf"
+      - "C:/Users/gusta/Documents/IT/Desarrollo/infra_docker/phphelpdesk:/var/www/html"
+      - "C:/Users/gusta/Documents/IT/Desarrollo/infra_docker/apache-config.conf:/etc/apache2/sites-available/000-default.conf"
       - "/etc/localtime:/etc/localtime:ro"
     depends_on:
       mysql:
@@ -147,9 +147,3 @@ networks:
   internal_net:
     driver: bridge
     name: n8n_internal_net
-
-volumes:
-  n8n_data:
-    driver: local
-  mysql_data:
-    driver: local
