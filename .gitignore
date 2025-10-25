@@ -1,1 +1,8 @@
 .env
+**/mailhog
+**/mysql
+**/mysql-data
+**/mysql-init
+**/n8n
+**/n8n-data
+**/phphelpdesk
